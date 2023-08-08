@@ -62,6 +62,7 @@ prapti = "prapti.tool:main"
 
 "prapti.experimental.agents" = "prapti.plugins.experimental_agents:prapti_plugin"
 "prapti.experimental.gitlog" = "prapti.plugins.experimental_gitlog:prapti_plugin"
+"prapti.experimental.memory_assistant" = "prapti.plugins.memory_assistant_responder:prapti_plugin"
 
 [tool.setuptools]
 include-package-data = true # ensure that template markdown files are included
