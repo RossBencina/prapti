@@ -20,8 +20,8 @@ class KnowledgeBaseArticle:
     id: str|None
     content: str
 
-class TestResponderConfiguration(BaseModel):
-    """Configuration parameters for test responder."""
+class MemoryAssistantResponderConfiguration(BaseModel):
+    """Configuration parameters for memory assistant responder."""
     model_config = ConfigDict(
         validate_assignment=True)
 
@@ -35,9 +35,9 @@ class TestResponderConfiguration(BaseModel):
 
 class MemoryAssistantResponder(Responder):
     def construct_configuration(self, context: ResponderContext) -> BaseModel|tuple[BaseModel, list[tuple[str,VarRef]]]|None:
-        return TestResponderConfiguration(), []
+        return MemoryAssistantResponderConfiguration(), []
 
-    def fetch_relevant_kb_article(self, conversation: list[Message], config: TestResponderConfiguration, context: ResponderContext) -> KnowledgeBaseArticle:
+    def fetch_relevant_kb_article(self, conversation: list[Message], config: MemoryAssistantResponderConfiguration, context: ResponderContext) -> KnowledgeBaseArticle:
         """Given the current user/assistant conversation, fetch KB article from chromadb
            Use the most recent 5 user+assistant messages as query text"""
 
@@ -48,13 +48,13 @@ class MemoryAssistantResponder(Responder):
         else:
             return KnowledgeBaseArticle(id=None, content="No relevant KB article available.")
 
-    def save_kb_article(self, kb: KnowledgeBaseArticle, config: TestResponderConfiguration, context: ResponderContext):
+    def save_kb_article(self, kb: KnowledgeBaseArticle, config: MemoryAssistantResponderConfiguration, context: ResponderContext):
         #kb_id = kb.id if kb.id else str(uuid4())
         kb_id = kb.id if kb.id else "63ffd04a-a08a-4884-a619-49c213943429"
         (self.memory_system_root / "chromadb" / f"{kb_id}.txt").write_text(kb.content, encoding="utf-8")
 
     def generate_responses(self, input_: list[Message], context: ResponderContext) -> list[Message]:
-        config: TestResponderConfiguration = context.responder_config
+        config: MemoryAssistantResponderConfiguration = context.responder_config
         context.log.debug(f"prapti.experimental.memory_assistant: input: {config = }", context.state.input_file_path)
         config = resolve_var_refs(config, context.root_config, context.log)
         context.log.debug(f"prapti.experimental.memory_assistant: resolved: {config = }", context.state.input_file_path)
