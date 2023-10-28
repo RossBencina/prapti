@@ -29,7 +29,8 @@ dependencies = [
     "openai >= 0.27.6",
     "tiktoken >= 0.4.0",
     "gpt4all >= 1.0.2",
-    "cancel_token >= 0.1.6"
+    "cancel_token >= 0.1.6",
+    "pygls >= 1.1.0"
 ]
 
 [tool.setuptools.dynamic]
@@ -48,6 +49,7 @@ Repository = "https://github.com/prapti-ai/prapti.git"
 
 [project.scripts]
 prapti = "prapti.tool:main"
+prapti-ls = "prapti.language_server:main"
 
 [project.entry-points."prapti.plugin"]
 "prapti.test.test_config" = "prapti.plugins.prapti_test_config:prapti_plugin"
