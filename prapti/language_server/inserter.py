@@ -532,49 +532,50 @@ async def insert_queued_text(queue: asyncio.Queue[str|QueueSentinel], inserter: 
     """process that dequeues text and events from the queue and buffers them locally
     until they are sucessfully inserted into the text inserter.
     REQUEST_CURSOR_REPAIR causes try_insert_text to be called even if there is no pending text"""
-    pending = ""
-    repair_cursor = True # repair cursor at start of run
-    at_end = False
-    while True:
-        if not at_end:
-            # copy more input into pending buffer
-            try:
-                while True:
-                    if pending or repair_cursor:
-                        # if we already have pending input, or we need to repair the cursor,
-                        # accumulate more without blocking
-                        s = queue.get_nowait()
-                    else:
-                        s = await queue.get() # block until data is available
-                    if s == QueueSentinel.END_OF_STREAM:
-                        at_end = True
+    try:
+        pending = ""
+        repair_cursor = True # repair cursor at start of run
+        at_end = False
+        while True:
+            if not at_end:
+                # copy more input into pending buffer
+                try:
+                    while True:
+                        if pending or repair_cursor:
+                            # if we already have pending input, or we need to repair the cursor,
+                            # accumulate more without blocking
+                            s = queue.get_nowait()
+                        else:
+                            s = await queue.get() # block until data is available
+                        if s == QueueSentinel.END_OF_STREAM:
+                            at_end = True
+                            queue.task_done()
+                            break
+                        elif s == QueueSentinel.REQUEST_CURSOR_REPAIR:
+                            repair_cursor = True
+                        else:
+                            pending += s
                         queue.task_done()
-                        break
-                    elif s == QueueSentinel.REQUEST_CURSOR_REPAIR:
-                        repair_cursor = True
-                    else:
-                        pending += s
-                    queue.task_done()
-            except asyncio.QueueEmpty: # thrown by queue.get_nowait()
-                pass
+                except asyncio.QueueEmpty: # thrown by queue.get_nowait()
+                    pass
 
-        if at_end and not pending:
-            break # done
+            if at_end and not pending:
+                break # done
 
-        edit_succeeded = await inserter.try_insert_text(pending)
-        if edit_succeeded:
-            pending = ""
-            repair_cursor = False
-        else:
-            await asyncio.sleep(0.1) # rate limit retries
+            edit_succeeded = await inserter.try_insert_text(pending)
+            if edit_succeeded:
+                pending = ""
+                repair_cursor = False
+            else:
+                await asyncio.sleep(0.1) # rate limit retries
 
-    # NOTE: the queue may not be empty at this point, because additional
-    # REQUEST_CURSOR_REPAIR events may be pushed. we just ignore them
-
-    # remove insertion cursor sequence from document
-    while True:
-        edit_succeeded = await inserter.try_remove_cursor_sequence()
-        if edit_succeeded:
-            break
-        else:
-            await asyncio.sleep(0.1) # rate-limit retries
+        # NOTE: the queue may not be empty at this point, because additional
+        # REQUEST_CURSOR_REPAIR events may be pushed. we just ignore them
+    finally:
+        # remove insertion cursor sequence from document
+        while True:
+            edit_succeeded = await inserter.try_remove_cursor_sequence()
+            if edit_succeeded:
+                break
+            else:
+                await asyncio.sleep(0.1) # rate-limit retries

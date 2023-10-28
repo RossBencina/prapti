@@ -30,9 +30,9 @@ class PraptiLanguageServer(LanguageServer):
             return
 
         document = self.workspace.get_text_document(document_uri)
+        prapti_run = LsPraptiRun()
+        self._active_prapti_runs[document.uri] = prapti_run
         try:
-            prapti_run = LsPraptiRun()
-            self._active_prapti_runs[document.uri] = prapti_run
             await prapti_run.run(self, self.lsp, document)
         finally:
             del self._active_prapti_runs[document.uri]
